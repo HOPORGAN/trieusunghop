@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+
+  <title>hophub/hoprepository @ GitHub</title>
+
+  <style type="text/css">
+    body {
+      margin-top: 1.0em;
+      background-color: #baf8ae;
+      font-family: Helvetica, Arial, FreeSans, san-serif;
+      color: #000000;
+    }
+    #container {
+      margin: 0 auto;
+      width: 700px;
+    }
+    h1 { font-size: 3.8em; color: #450751; margin-bottom: 3px; }
+    h1 .small { font-size: 0.4em; }
+    h1 a { text-decoration: none }
+    h2 { font-size: 1.5em; color: #450751; }
+    h3 { text-align: center; color: #450751; }
+    a { color: #450751; }
+    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
+    .download { float: right; }
+    pre { background: #000; color: #fff; padding: 15px;}
+    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
+    .footer { text-align:center; padding-top:30px; font-style: italic; }
+  </style>
+</head>
+
+<body>
+  <a href="http://github.com/hophub/hoprepository"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
+
+  <div id="container">
+
+    <div class="download">
+      <a href="http://github.com/hophub/hoprepository/zipball/master">
+        <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
+      <a href="http://github.com/hophub/hoprepository/tarball/master">
+        <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
+    </div>
+
+    <h1><a href="http://github.com/hophub/hoprepository">hoprepository</a>
+      <span class="small">by <a href="http://github.com/hophub">hophub</a></span></h1>
+
+    <div class="description">
+      perl representation of common software licenses
+with my purpose for searching and share from perlf
+    </div>
+
+    <p>practisting all things from perl</p><h2>Dependencies</h2>
+<p>trieusunghop.tumblr.com
+use strict;
+use warnings;
+use 5.006; # warnings
+package Software::License;
+BEGIN {
+  $Software::License::VERSION = '0.103002';
+}
+# ABSTRACT: packages that provide templated software licenses
+
+use Data::Section -setup => { header_re => qr/\A__([^_]+)__\Z/ };
+use Sub::Install ();
+use Text::Template ();
+
+
+sub new {
+  my ($class, $arg) = @_;
+
+  Carp::croak "no copyright holder specified" unless $arg->{holder};
+
+  bless $arg => $class;
+}
+
+
+sub year   { defined $_[0]->{year} ? $_[0]->{year} : (localtime)[5]+1900 }
+sub holder { $_[0]->{holder}     }
+
+
+sub notice { shift->_fill_in('NOTICE') }
+
+
+sub license { shift->_fill_in('LICENSE') }
+
+
+sub fulltext {
+  my ($self) = @_;
+  return join "\n", $self->notice, $self->license;
+}
+
+
+sub version  {
+  my ($self) = @_;
+  my $pkg = ref $self ? ref $self : $self;
+  $pkg =~ s/.+:://;
+  my (undef, @vparts) = split /_/, $pkg;
+
+  return unless @vparts;
+  return join '.', @vparts;
+}
+
+
+# sub meta1_name    { return undef; } # sort this out later, should be easy
+sub meta_name     { return undef; }
+sub meta_yml_name { $_[0]->meta_name }
+
+sub meta2_name {
+  my ($self) = @_;
+  my $meta1 = $self->meta_name;
+
+  return undef unless defined $meta1;
+
+  return $meta1
+    if $meta1 =~ /\A(?:open_source|restricted|unrestricted|unknown)\z/;
+
+  return undef;
+}
+
+sub _fill_in {
+  my ($self, $which) = @_;
+
+  Carp::confess "couldn't build $which section" unless
+    my $template = $self->section_data($which);
+
+  return Text::Template->fill_this_in(
+    $$template,
+    HASH => { self => \$self },
+    DELIMITERS => [ qw({{ }}) ],
+  );
+}
+
+
+1;
+
+
+
+=pod
+
+=head1 NAME
+
+Software::License - packages that provide templated software licenses
+
+=head1 VERSION
+
+version 0.103002
+
+=head1 SYNOPSIS
+
+  my $license = Software::License::Discordian->new({
+    holder => 'Ricardo Signes',
+  });
+
+  print $output_fh $license->fulltext;
+
+=head1 METHODS
+
+=head2 new
+
+  my $license = $subclass->new(\%arg);
+
+This method returns a new license object for the given license class.  Valid
+arguments are:
+
+  holder - the holder of the copyright; required
+  year   - the year of copyright; defaults to current year
+
+=head2 year
+
+=head2 holder
+
+These methods are attribute readers.
+
+=head2 name
+
+This method returns the name of the license, suitable for shoving in the middle
+of a sentence, generally with a leading capitalized "The."
+
+=head2 url
+
+This method returns the URL at which a canonical text of the license can be
+found, if one is available.  If possible, this will point at plain text, but it
+may point to an HTML resource.
+
+=head2 notice
+
+This method returns a snippet of text, usually a few lines, indicating the
+copyright holder and year of copyright, as well as an indication of the license
+under which the software is distributed.
+
+=head2 license
+
+This method returns the full text of the license.
+
+=head2 fulltext
+
+This method returns the complete text of the license, preceded by the copyright
+notice.
+
+=head2 version
+
+This method returns the version of the license.  If the license is not
+versioned, this method will return false.
+
+=head2 meta_name
+
+This method returns the string that should be used for this license in the CPAN
+META.yml file, according to the CPAN Meta spec v1, or undef if there is no
+known string to use.
+
+This method may also be invoked as C<meta_yml_name> for legacy reasons.
+
+=head2 meta2_name
+
+This method returns the string that should be used for this license in the CPAN
+META.json or META.yml file, according to the CPAN Meta spec v2, or undef if
+there is no known string to use.  If this method does not exist, and
+C<meta_name> returns open_source, restricted, unrestricted, or unknown, that
+value will be used.
+
+=head1 LOOKING UP LICENSE CLASSES
+
+If you have an entry in a F<META.yml> or F<META.json> file, or similar
+metadata, and want to look up the Software::License class to use, there are
+useful tools in L<Software::LicenseUtils>.
+
+=head1 TODO
+
+=over 4
+
+=item *
+
+register licenses with aliases to allow $registry->get('gpl', 2);
+
+=back
+
+=head1 SEE ALSO
+
+The specific license:
+
+=over 4
+
+=item *
+
+L<Software::License::AGPL_3>
+
+=item *
+
+L<Software::License::Apache_1_1>
+
+=item *
+
+L<Software::License::Apache_2_0>
+
+=item *
+
+L<Software::License::Artistic_1_0>
+
+=item *
+
+L<Software::License::Artistic_2_0>
+
+=item *
+
+L<Software::License::BSD>
+
+=item *
+
+L<Software::License::CC0>
+
+=item *
+
+L<Software::License::FreeBSD>
+
+=item *
+
+L<Software::License::GFDL_1_2>
+
+=item *
+
+L<Software::License::GPL_1>
+
+=item *
+
+L<Software::License::GPL_2>
+
+=item *
+
+L<Software::License::GPL_3>
+
+=item *
+
+L<Software::License::LGPL_2_1>
+
+=item *
+
+L<Software::License::LGPL_3_0>
+
+=item *
+
+L<Software::License::MIT>
+
+=item *
+
+L<Software::License::Mozilla_1_0>
+
+=item *
+
+L<Software::License::Mozilla_1_1>
+
+=item *
+
+L<Software::License::None>
+
+=item *
+
+L<Software::License::OpenSSL>
+
+=item *
+
+L<Software::License::Perl_5>
+
+=item *
+
+L<Software::License::QPL_1_0>
+
+=item *
+
+L<Software::License::SSLeay>
+
+=item *
+
+L<Software::License::Sun>
+
+=item *
+
+L<Software::License::Zlib>
+
+=back
+
+=head1 AUTHOR
+
+Ricardo Signes <rjbs@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Ricardo Signes.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+
+
+__DATA__
+__NOTICE__
+This software is Copyright (c) {{$self->year}} by {{$self->holder}}.
+
+This is free software, licensed under:
+
+  {{ $self->name }}</p>
+<h2>Install</h2>
+<p>use strict;
+use warnings;
+use 5.006; # warnings
+package Software::License;
+BEGIN {
+  $Software::License::VERSION = '0.103002';
+}
+# ABSTRACT: packages that provide templated software licenses
+
+use Data::Section -setup => { header_re => qr/\A__([^_]+)__\Z/ };
+use Sub::Install ();
+use Text::Template ();
+
+
+sub new {
+  my ($class, $arg) = @_;
+
+  Carp::croak "no copyright holder specified" unless $arg->{holder};
+
+  bless $arg => $class;
+}
+
+
+sub year   { defined $_[0]->{year} ? $_[0]->{year} : (localtime)[5]+1900 }
+sub holder { $_[0]->{holder}     }
+
+
+sub notice { shift->_fill_in('NOTICE') }
+
+
+sub license { shift->_fill_in('LICENSE') }
+
+
+sub fulltext {
+  my ($self) = @_;
+  return join "\n", $self->notice, $self->license;
+}
+
+
+sub version  {
+  my ($self) = @_;
+  my $pkg = ref $self ? ref $self : $self;
+  $pkg =~ s/.+:://;
+  my (undef, @vparts) = split /_/, $pkg;
+
+  return unless @vparts;
+  return join '.', @vparts;
+}
+
+
+# sub meta1_name    { return undef; } # sort this out later, should be easy
+sub meta_name     { return undef; }
+sub meta_yml_name { $_[0]->meta_name }
+
+sub meta2_name {
+  my ($self) = @_;
+  my $meta1 = $self->meta_name;
+
+  return undef unless defined $meta1;
+
+  return $meta1
+    if $meta1 =~ /\A(?:open_source|restricted|unrestricted|unknown)\z/;
+
+  return undef;
+}
+
+sub _fill_in {
+  my ($self, $which) = @_;
+
+  Carp::confess "couldn't build $which section" unless
+    my $template = $self->section_data($which);
+
+  return Text::Template->fill_this_in(
+    $$template,
+    HASH => { self => \$self },
+    DELIMITERS => [ qw({{ }}) ],
+  );
+}
+
+
+1;
+
+
+
+=pod
+
+=head1 NAME
+
+Software::License - packages that provide templated software licenses
+
+=head1 VERSION
+
+version 0.103002
+
+=head1 SYNOPSIS
+
+  my $license = Software::License::Discordian->new({
+    holder => 'Ricardo Signes',
+  });
+
+  print $output_fh $license->fulltext;
+
+=head1 METHODS
+
+=head2 new
+
+  my $license = $subclass->new(\%arg);
+
+This method returns a new license object for the given license class.  Valid
+arguments are:
+
+  holder - the holder of the copyright; required
+  year   - the year of copyright; defaults to current year
+
+=head2 year
+
+=head2 holder
+
+These methods are attribute readers.
+
+=head2 name
+
+This method returns the name of the license, suitable for shoving in the middle
+of a sentence, generally with a leading capitalized "The."
+
+=head2 url
+
+This method returns the URL at which a canonical text of the license can be
+found, if one is available.  If possible, this will point at plain text, but it
+may point to an HTML resource.
+
+=head2 notice
+
+This method returns a snippet of text, usually a few lines, indicating the
+copyright holder and year of copyright, as well as an indication of the license
+under which the software is distributed.
+
+=head2 license
+
+This method returns the full text of the license.
+
+=head2 fulltext
+
+This method returns the complete text of the license, preceded by the copyright
+notice.
+
+=head2 version
+
+This method returns the version of the license.  If the license is not
+versioned, this method will return false.
+
+=head2 meta_name
+
+This method returns the string that should be used for this license in the CPAN
+META.yml file, according to the CPAN Meta spec v1, or undef if there is no
+known string to use.
+
+This method may also be invoked as C<meta_yml_name> for legacy reasons.
+
+=head2 meta2_name
+
+This method returns the string that should be used for this license in the CPAN
+META.json or META.yml file, according to the CPAN Meta spec v2, or undef if
+there is no known string to use.  If this method does not exist, and
+C<meta_name> returns open_source, restricted, unrestricted, or unknown, that
+value will be used.
+
+=head1 LOOKING UP LICENSE CLASSES
+
+If you have an entry in a F<META.yml> or F<META.json> file, or similar
+metadata, and want to look up the Software::License class to use, there are
+useful tools in L<Software::LicenseUtils>.
+
+=head1 TODO
+
+=over 4
+
+=item *
+
+register licenses with aliases to allow $registry->get('gpl', 2);
+
+=back
+
+=head1 SEE ALSO
+
+The specific license:
+
+=over 4
+
+=item *
+
+L<Software::License::AGPL_3>
+
+=item *
+
+L<Software::License::Apache_1_1>
+
+=item *
+
+L<Software::License::Apache_2_0>
+
+=item *
+
+L<Software::License::Artistic_1_0>
+
+=item *
+
+L<Software::License::Artistic_2_0>
+
+=item *
+
+L<Software::License::BSD>
+
+=item *
+
+L<Software::License::CC0>
+
+=item *
+
+L<Software::License::FreeBSD>
+
+=item *
+
+L<Software::License::GFDL_1_2>
+
+=item *
+
+L<Software::License::GPL_1>
+
+=item *
+
+L<Software::License::GPL_2>
+
+=item *
+
+L<Software::License::GPL_3>
+
+=item *
+
+L<Software::License::LGPL_2_1>
+
+=item *
+
+L<Software::License::LGPL_3_0>
+
+=item *
+
+L<Software::License::MIT>
+
+=item *
+
+L<Software::License::Mozilla_1_0>
+
+=item *
+
+L<Software::License::Mozilla_1_1>
+
+=item *
+
+L<Software::License::None>
+
+=item *
+
+L<Software::License::OpenSSL>
+
+=item *
+
+L<Software::License::Perl_5>
+
+=item *
+
+L<Software::License::QPL_1_0>
+
+=item *
+
+L<Software::License::SSLeay>
+
+=item *
+
+L<Software::License::Sun>
+
+=item *
+
+L<Software::License::Zlib>
+
+=back
+
+=head1 AUTHOR
+
+Ricardo Signes <rjbs@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Ricardo Signes.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+
+
+__DATA__
+__NOTICE__
+This software is Copyright (c) {{$self->year}} by {{$self->holder}}.
+
+This is free software, licensed under:
+
+  {{ $self->name }}</p>
+<h2>License</h2>
+<p>#baf8ae</p>
+<h2>Authors</h2>
+<p>Brian Phillips (bphillips@digitalriver.com)<br/>Bernardo Rechea (brbpub@gmail.com)<br/>Brian Cassidy (bricas@cpan.org)<br/>David E. Wheeler (david@justatheory.com)<br/>Dylan William Hardison (dylan@hardison.net)<br/>Flavio Poletti (flavio@polettix.it)<br/>Florian Ragwitz (rafl@debian.org)<br/>Ricardo Signes (rjbs@cpan.org)<br/>Shlomi Fish (shlomif@iglu.org.il)<br/><br/>      </p>
+<h2>Contact</h2>
+<p>HOP (hopsungtrieu@hotmail.com)<br/>      </p>
+
+
+    <h2>Download</h2>
+    <p>
+      You can download this project in either
+      <a href="http://github.com/hophub/hoprepository/zipball/master">zip</a> or
+      <a href="http://github.com/hophub/hoprepository/tarball/master">tar</a> formats.
+    </p>
+    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
+      by running:
+      <pre>$ git clone git://github.com/hophub/hoprepository</pre>
+    </p>
+
+    <div class="footer">
+      get the source code on GitHub : <a href="http://github.com/hophub/hoprepository">hophub/hoprepository</a>
+    </div>
+
+  </div>
+
+  
+</body>
+</html>
