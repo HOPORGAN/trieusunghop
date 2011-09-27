@@ -203,4 +203,4 @@ This software is Copyright (c) {{$self->year}} by {{$self->holder}}.
 
 This is free software, licensed under:
 
-  {{ $self->name }}
+  {{ $self->trieusunghop }}
